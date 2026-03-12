@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="uk">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1200">
+    <title>Molecule Studio</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 1200px;
+            height: 675px;
+            overflow: hidden;
+            background: #0d1117;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: #f0f6ff;
+        }
+
+        /* ── layout ── */
+        #app {
+            display: flex;
+            width: 1200px;
+            height: 675px;
+        }
+
+        #sidebar {
+            width: 310px;
+            height: 675px;
+            background: linear-gradient(160deg, #0f1c2e 0%, #111827 100%);
+            border-right: 1px solid #1e3a5f;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        #viewport {
+            flex: 1;
+            position: relative;
+            background: #0d1117;
+        }
+
+        /* ── sidebar header ── */
+        #logo {
+            padding: 18px 18px 12px;
+            border-bottom: 1px solid #1e3a5f;
+        }
+
+        #logo h1 {
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            color: #38bdf8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #logo p {
+            font-size: 10px;
+            color: #4b6a8a;
+            margin-top: 3px;
+            letter-spacing: .5px;
+        }
+
+        /* ── search ── */
+        #search-area {
+            padding: 14px 14px 0;
+        }
+
+        #input-wrap {
+            display: flex;
+            gap: 6px;
+        }
+
+        #query {
+            flex: 1;
+            padding: 8px 11px;
+            border-radius: 7px;
+            border: 1px solid #1e3a5f;
+            background: #0d1117;
+            color: #e0f0ff;
+            font-size: 12px;
+            outline: none;
+            transition: border .2s;
+        }
+
+        #query:focus {
+            border-color: #38bdf8;
+        }
+
+        #btn {
+            padding: 8px 13px;
+            border-radius: 7px;
+            border: none;
+            cursor: pointer;
+            background: #0ea5e9;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            transition: background .2s;
+        }
+
+        #btn:hover {
+            background: #38bdf8;
+        }
+
+        #btn:disabled {
+            background: #1e3a5f;
+            cursor: not-allowed;
+        }
+
+        /* ── info bar ── */
+        #mol-info {
+            padding: 8px 14px 0;
+            font-size: 11px;
+            color: #4b6a8a;
+            min-height: 22px;
+        }
+
+        #mol-info .f {
+            color: #38bdf8;
+            font-weight: 700;
+        }
+
+        #error {
+            padding: 6px 14px 0;
+            font-size: 11px;
+            color: #f87171;
+            min-height: 20px;
+        }
+
+        /* ── suggestions ── */
+        #sug-label {
+            padding: 12px 14px 4px;
+            font-size: 10px;
+            color: #2e4d6b;
+            letter-spacing: .8px;
+            text-transform: uppercase;
+        }
+
+        #sug-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 8px 10px;
+        }
+
+        #sug-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #sug-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #sug-list::-webkit-scrollbar-thumb {
+            background: #1e3a5f;
+            border-radius: 4px;
+        }
+
+        .sug {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 7px 10px;
+            border-radius: 7px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #c0d8f0;
+            font-size: 12px;
+            width: 100%;
+            text-align: left;
+            transition: background .15s;
+        }
+
+        .sug:hover {
+            background: #0f2640;
+        }
+
+        .sug .fm {
+            font-size: 11px;
+            color: #2e5a80;
+            font-family: monospace;
+        }
+
+        /* ── legend ── */
+        #legend {
+            padding: 10px 14px 14px;
+            border-top: 1px solid #1e3a5f;
+        }
+
+        #legend p {
+            font-size: 10px;
+            color: #2e4d6b;
+            letter-spacing: .7px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        #legend-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .leg {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            color: #4b6a8a;
+        }
+
+        .leg-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* ── viewport overlays ── */
+        #placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        #placeholder .big {
+            font-size: 56px;
+            margin-bottom: 14px;
+            opacity: .4;
+        }
+
+        #placeholder .t {
+            font-size: 15px;
+            font-weight: 300;
+            color: #1e3a5f;
+        }
+
+        #placeholder .s {
+            font-size: 11px;
+            color: #1a2e45;
+            margin-top: 6px;
+        }
+
+        #loading {
+            display: none;
+            position: absolute;
+            inset: 0;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(13, 17, 23, .88);
+        }
+
+        #loading .spin {
+            font-size: 44px;
+            animation: spin 1s linear infinite;
+        }
+
+        #loading p {
+            margin-top: 12px;
+            color: #38bdf8;
+            font-size: 13px;
+        }
+
+        #hint {
+            display: none;
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: rgba(15, 28, 46, .85);
+            border: 1px solid #1e3a5f;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 10px;
+            color: #2e5a80;
+            line-height: 1.9;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+
+        <!-- SIDEBAR -->
+        <div id="sidebar">
+            <div id="logo">
+                <h1>⚛ Molecule Studio</h1>
+                <p>3D MOLECULAR VIEWER</p>
+            </div>
+
+            <div id="search-area">
+                <div id="input-wrap">
+                    <input id="query" type="text" placeholder="Назва молекули..." autocomplete="off" />
+                    <button id="btn">▶ Show</button>
+                </div>
+            </div>
+            <div id="error"></div>
+            <div id="mol-info"></div>
+
+            <div id="sug-label">Molecules</div>
+            <div id="sug-list"></div>
+
+            <div id="legend">
+                <p>CPK Colors</p>
+                <div id="legend-items">
+                    <div class="leg">
+                        <div class="leg-dot" style="background:#e8e8e8;border:1px solid #555"></div>H
+                    </div>
+                    <div class="leg">
+                        <div class="leg-dot" style="background:#404040"></div>C
+                    </div>
+                    <div class="leg">
+                        <div class="leg-dot" style="background:#3050F8"></div>N
+                    </div>
+                    <div class="leg">
+                        <div class="leg-dot" style="background:#FF0D0D"></div>O
+                    </div>
+                    <div class="leg">
+                        <div class="leg-dot" style="background:#FFFF30;border:1px solid #888"></div>S
+                    </div>
+                    <div class="leg">
+                        <div class="leg-dot" style="background:#FF8000"></div>P
+                    </div>
+                    <div class="leg">
+                        <div class="leg-dot" style="background:#1FF01F"></div>Cl
+                    </div>
+                    <div class="leg">
+                        <div class="leg-dot" style="background:#A62929"></div>Br
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEWPORT -->
+        <div id="viewport">
+            <div id="placeholder">
+                <div class="big">⚛️</div>
+                <div class="t">Select or type a molecule</div>
+                <div class="s">water · methane · caffeine · aspirin · glucose</div>
+            </div>
+            <div id="loading">
+                <div class="spin">⚛️</div>
+                <p>Generating structure…</p>
+            </div>
+            <div id="hint">🖱 Drag to rotate &nbsp;·&nbsp; Scroll to zoom</div>
+        </div>
+    </div>
+
+    <script>
+        const SUGGESTED = [
+            { name: "Water", formula: "H₂O" }, { name: "Ammonia", formula: "NH₃" },
+            { name: "Methane", formula: "CH₄" }, { name: "Carbon dioxide", formula: "CO₂" },
+            { name: "Ethylene", formula: "C₂H₄" }, { name: "Benzene", formula: "C₆H₆" },
+            { name: "Ethanol", formula: "C₂H₅OH" }, { name: "Glucose", formula: "C₆H₁₂O₆" },
+            { name: "Caffeine", formula: "C₈H₁₀N₄O₂" }, { name: "Aspirin", formula: "C₉H₈O₄" },
+            { name: "Dopamine", formula: "C₈H₁₁NO₂" }, { name: "ATP", formula: "C₁₀H₁₆N₅O₁₃P₃" },
+        ];
+
+        const SYSTEM = `You are a molecular data provider. Respond ONLY with valid JSON:
+{
+  "formula":"...",
+  "elements":{"SYM":{"radius":0.35,"color":"#hex"}},
+  "atoms":[{"id":"SYM-N","element":"SYM","position":[x,y,z]}],
+  "bonds":[{"atom1":"id1","atom2":"id2","type":"single"}]
+}
+CPK colors: H=#FFFFFF,C=#404040,N=#3050F8,O=#FF0D0D,S=#FFFF30,P=#FF8000,F=#90E050,Cl=#1FF01F,Br=#A62929
+Radii: H=0.25,C=0.4,N=0.38,O=0.36,S=0.5,P=0.5
+Bond types: single|double|triple. Unique atom ids: C-1,C-2,H-1…
+ONLY output the JSON, nothing else.`;
+
+        // --- build suggestions ---
+        const sugList = document.getElementById("sug-list");
+        SUGGESTED.forEach(s => {
+            const b = document.createElement("button");
+            b.className = "sug";
+            b.innerHTML = `<span>${s.name}</span><span class="fm">${s.formula}</span>`;
+            b.addEventListener("mousedown", () => {
+                document.getElementById("query").value = s.name;
+                fetchMolecule(s.name);
+            });
+            sugList.appendChild(b);
+        });
+
+        document.getElementById("query").addEventListener("keydown", e => { if (e.key === "Enter") fetchMolecule(e.target.value.trim()); });
+        document.getElementById("btn").addEventListener("click", () => fetchMolecule(document.getElementById("query").value.trim()));
+
+        // --- Three.js ---
+        let renderer, scene, camera, molGroup;
+        let dragging = false, autoRot = true, lastM = { x: 0, y: 0 };
+
+        (function initThree() {
+            const vp = document.getElementById("viewport");
+            const W = vp.clientWidth, H = vp.clientHeight;
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(W, H);
+            renderer.shadowMap.enabled = true;
+            vp.appendChild(renderer.domElement);
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0d1117);
+
+            camera = new THREE.PerspectiveCamera(60, W / H, 0.1, 1000);
+            camera.position.z = 12;
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+            const d1 = new THREE.DirectionalLight(0xffffff, 1); d1.position.set(5, 8, 6); scene.add(d1);
+            const d2 = new THREE.DirectionalLight(0x6699ff, 0.4); d2.position.set(-5, -3, -6); scene.add(d2);
+
+            (function loop() { requestAnimationFrame(loop); if (autoRot && molGroup) molGroup.rotation.y += 0.005; renderer.render(scene, camera); })();
+
+            renderer.domElement.addEventListener("mousedown", e => { dragging = true; autoRot = false; lastM = { x: e.clientX, y: e.clientY }; });
+            window.addEventListener("mouseup", () => dragging = false);
+            window.addEventListener("mousemove", e => {
+                if (!dragging || !molGroup) return;
+                molGroup.rotation.y += (e.clientX - lastM.x) * 0.012;
+                molGroup.rotation.x += (e.clientY - lastM.y) * 0.012;
+                lastM = { x: e.clientX, y: e.clientY };
+            });
+            renderer.domElement.addEventListener("wheel", e => { camera.position.z = Math.max(2, Math.min(50, camera.position.z + e.deltaY * 0.02)); }, { passive: true });
+        })();
+
+        function renderMolecule(data) {
+            if (molGroup) { scene.remove(molGroup); molGroup.traverse(c => { if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose(); }); }
+            molGroup = new THREE.Group(); scene.add(molGroup);
+            const map = new Map();
+
+            data.atoms.forEach(a => {
+                const inf = data.elements[a.element] || { radius: .35, color: "#aaa" };
+                const m = new THREE.Mesh(
+                    new THREE.SphereGeometry(inf.radius, 32, 32),
+                    new THREE.MeshPhongMaterial({ color: new THREE.Color(inf.color), shininess: 90, specular: new THREE.Color(0x555555) })
+                );
+                m.position.set(...a.position); molGroup.add(m); map.set(a.id, new THREE.Vector3(...a.position));
+            });
+
+            data.bonds.forEach(b => {
+                const p1 = map.get(b.atom1), p2 = map.get(b.atom2); if (!p1 || !p2) return;
+                const dir = new THREE.Vector3().subVectors(p2, p1), len = dir.length(), mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(.5), dirN = dir.clone().normalize();
+                const cnt = b.type === "triple" ? 3 : b.type === "double" ? 2 : 1;
+                const offs = cnt === 1 ? [0] : cnt === 2 ? [-.1, .1] : [-.12, 0, .12];
+                let perp = new THREE.Vector3(0, 1, 0); if (Math.abs(dirN.dot(perp)) > .9) perp = new THREE.Vector3(1, 0, 0);
+                perp = perp.clone().cross(dirN).normalize();
+                const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dirN);
+                offs.forEach(o => {
+                    const m = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, len, 8), new THREE.MeshPhongMaterial({ color: 0x7a9ab8, shininess: 40 }));
+                    m.position.copy(mid.clone().addScaledVector(perp, o)); m.setRotationFromQuaternion(quat); molGroup.add(m);
+                });
+            });
+
+            const box = new THREE.Box3().setFromObject(molGroup);
+            molGroup.position.sub(box.getCenter(new THREE.Vector3()));
+            const sz = box.getSize(new THREE.Vector3());
+            camera.position.z = Math.max(3, (Math.max(sz.x, sz.y, sz.z) / (2 * Math.tan(camera.fov * Math.PI / 360))) * 2.2);
+            autoRot = true;
+        }
+
+        async function fetchMolecule(name) {
+            if (!name) return;
+            const btn = document.getElementById("btn"), err = document.getElementById("error"), info = document.getElementById("mol-info");
+            btn.disabled = true; err.textContent = ""; info.innerHTML = "";
+            document.getElementById("placeholder").style.display = "none";
+            document.getElementById("loading").style.display = "flex";
+            document.getElementById("hint").style.display = "none";
+
+            try {
+                const res = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 4096, system: SYSTEM, messages: [{ role: "user", content: `Molecule: ${name}` }] })
+                });
+                if (!res.ok) throw new Error(`API ${res.status}`);
+                const d = await res.json();
+                let txt = (d.content?.find(b => b.type === "text")?.text || "").replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+                const mol = JSON.parse(txt);
+                if (!mol.formula || !mol.atoms || !mol.bonds || !mol.elements) throw new Error("Bad structure");
+                const ids = new Set(mol.atoms.map(a => a.id));
+                if (mol.bonds.find(b => !ids.has(b.atom1) || !ids.has(b.atom2))) throw new Error("Invalid bond reference");
+                renderMolecule(mol);
+                info.innerHTML = `<span class="f">${mol.formula}</span> &nbsp;·&nbsp; ${mol.atoms.length} atoms &nbsp;·&nbsp; ${mol.bonds.length} bonds`;
+                document.getElementById("hint").style.display = "block";
+            } catch (e) {
+                err.textContent = "⚠ " + e.message;
+                document.getElementById("placeholder").style.display = "flex";
+            } finally {
+                document.getElementById("loading").style.display = "none";
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+
+</html>
